@@ -1,6 +1,7 @@
 import math
+import numpy as np
 
-from utils import get_zeros_vec, get_random_numbers, get_random_number
+from utils import get_zeros_vec, get_dot
 
 
 def get_log_loss(y_true: list[float], y_train: list[float]) -> float:
@@ -28,12 +29,12 @@ def get_gradient_descent(x: list[list[float]],
                          current_w: list[float],
                          current_b: float,
                          learning_rate: float) -> (list[float], float):
-    dw: list = get_zeros_vec(n)
+    dw: list[float] = get_zeros_vec(n)
     db: float = .0
 
     for i in range(len(x)):
-        z = [x[i][j] * current_w[j] + current_b for j in range(len(x[i]))]
-        a = sigmoid(z[0])
+        z = get_dot(x[i], current_w) + current_b
+        a = sigmoid(z)
 
         # Считаем градиент
         for k in range(n):
@@ -45,25 +46,27 @@ def get_gradient_descent(x: list[list[float]],
     db /= len(x)
 
     updated_w: list = get_zeros_vec(n)
-    updated_b: list = get_zeros_vec(n)
 
     for i in range(n):
         updated_w[i] = current_w[i] - learning_rate * dw[i]
-        updated_b[i] = current_b - learning_rate * db
+
+    updated_b = current_b - learning_rate * db
 
     return updated_w, updated_b
 
 
-class LogicalRegression:
+class LogisticRegression:
     """
         Реализация логической регрессии
     """
 
     def __init__(self, n: int, x_test: list[list[float]], y_test: list[float]) -> None:
         self._n = n
-        self._w = get_random_numbers(n)
-        self._b = get_random_number()
-        self._report_current_results = 100
+        self._w = list(np.random.randn(n, 1) * 0.001)
+        self._b = np.random.randn() * 0.001
+
+        print(self._w, self._b)
+        self._report_current_results = 40
 
         self._x_test = x_test
         self._y_test = y_test
@@ -71,7 +74,19 @@ class LogicalRegression:
         self._losses_train = []
         self._losses_test = []
 
-    def train(self, x: list[list[float]], y: list[float], learning_rate: float, epochs=10) -> None:
+    @property
+    def report_current_results(self) -> int:
+        return self._report_current_results
+
+    @property
+    def losses_train(self) -> list[float]:
+        return self._losses_train
+
+    @property
+    def losses_test(self) -> list[float]:
+        return self._losses_test
+
+    def train(self, x: list[list[float]], y: list[float], learning_rate: float = 0.005, epochs=10) -> None:
         for epoch in range(epochs):
             gradient_values = get_gradient_descent(x, y, self._n, self._w, self._b, learning_rate)
             updated_w, updated_b = gradient_values
@@ -80,13 +95,13 @@ class LogicalRegression:
             self._b = updated_b
 
             if epoch % self._report_current_results == 0:
-                self._losses_train.append(get_log_loss(y, self.__predict(x)))
-                self._losses_test.append(get_log_loss(self._y_test, self.__predict(self._x_test)))
+                self._losses_train.append(get_log_loss(y, self.predict(x)))
+                self._losses_test.append(get_log_loss(self._y_test, self.predict(self._x_test)))
 
-    def __predict(self, x: list[list[float]]) -> list[float]:
+    def predict(self, x: list[list[float]]) -> list[float]:
         result: list[float] = []
         for i in range(len(x)):
-            z = [x[i][j] * self._w[j] + self._b for j in range(len(x[i]))]
-            s = sigmoid(z[0])
+            z = get_dot(x[i], self._w) + self._b
+            s = sigmoid(z)
             result.append(s)
         return result
